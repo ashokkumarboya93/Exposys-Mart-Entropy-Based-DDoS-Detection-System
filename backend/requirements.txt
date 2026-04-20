@@ -1,0 +1,42 @@
+# ════════════════════════════════════════════════════════════
+#  Exposys Mart DDoS Detection Platform — Dependencies
+# ════════════════════════════════════════════════════════════
+
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database
+sqlalchemy==2.0.36
+pymysql==1.1.1
+cryptography==44.0.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+
+# HTTP & Async
+httpx==0.28.1
+anyio==4.8.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Logging
+python-json-logger==3.2.1
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+
+# Background Tasks
+celery==5.4.0
+redis==5.2.1
+
+# Report Generation
+reportlab==4.2.0
+
+# Production Server
+gunicorn==23.0.0

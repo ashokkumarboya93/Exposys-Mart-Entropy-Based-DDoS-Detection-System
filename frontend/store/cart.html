@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart — Exposys Mart</title>
+  <link rel="stylesheet" href="css/store.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+</head>
+<body class="store-body">
+
+  <!-- Header -->
+  <header class="store-header glass-nav">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;color:var(--brand-primary);"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Exposys <span>Mart</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="index.html#products">Products</a>
+      </div>
+      <div class="nav-actions">
+        <a href="cart.html" class="nav-cart active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+          <span class="cart-badge" id="cart-badge" style="display:none">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="margin-top: 100px; padding-bottom: 80px;">
+    <div class="cart-layout" style="display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start;">
+      
+      <!-- Cart List -->
+      <section>
+        <h1 style="font-size: 1.75rem; margin-bottom: 8px;">Your Cart</h1>
+        <p style="color: var(--text-muted); margin-bottom: 24px;" id="cart-count-label">0 items</p>
+        
+        <div id="cart-list" class="cart-items-container">
+          <!-- Items injected by JS -->
+        </div>
+
+        <div id="cart-empty" style="display:none; text-align: center; padding: 60px 0;">
+          <div style="font-size: 4rem; margin-bottom: 16px;">🛒</div>
+          <h3>Your cart is empty</h3>
+          <p style="color: var(--text-muted); margin-bottom: 24px;">Looks like you haven't added anything to your cart yet.</p>
+          <a href="index.html" class="btn btn-primary">Start Shopping</a>
+        </div>
+      </section>
+
+      <!-- Summary Sidebar -->
+      <aside id="summary-card" class="glass-card" style="padding: 24px; position: sticky; top: 100px;">
+        <h3 style="margin-top: 0; margin-bottom: 20px;">Order Summary</h3>
+        
+        <div class="summary-row" style="display:flex; justify-content: space-between; margin-bottom: 12px; font-size: .9rem;">
+          <span>Subtotal</span>
+          <span id="sum-subtotal">₹0</span>
+        </div>
+        <div class="summary-row" style="display:flex; justify-content: space-between; margin-bottom: 12px; font-size: .9rem;">
+          <span>Estimated Tax (8%)</span>
+          <span id="sum-tax">₹0</span>
+        </div>
+        <div class="summary-row" style="display:flex; justify-content: space-between; margin-bottom: 12px; font-size: .9rem;">
+          <span>Shipping</span>
+          <span style="color: #10b981; font-weight: 600;">FREE</span>
+        </div>
+        
+        <div style="height: 1px; background: var(--border); margin: 20px 0;"></div>
+        
+        <div class="summary-row" style="display:flex; justify-content: space-between; margin-bottom: 24px; font-size: 1.15rem; font-weight: 700;">
+          <span>Total</span>
+          <span id="sum-total">₹0</span>
+        </div>
+
+        <a href="checkout.html" class="btn btn-primary" style="width: 100%; text-align: center; padding: 14px;">
+          Proceed to Checkout
+        </a>
+        
+        <p style="text-align: center; font-size: .75rem; color: var(--text-muted); margin-top: 16px;">
+          Secure checkout powered by EntropyGuard™
+        </p>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/store-api.js"></script>
+  <script src="js/store-cart.js"></script>
+  <script src="js/store-app.js"></script>
+
+  <style>
+    .cart-item {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 20px;
+      padding: 20px;
+      background: var(--bg-card);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .cart-item:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .cart-item-img {
+      width: 120px;
+      height: 120px;
+      background: white;
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+    .cart-item-img img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .cart-item-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .cart-item-brand {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .cart-item-price {
+      font-weight: 700;
+      color: var(--brand-primary);
+    }
+    .qty-ctrl {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-body);
+      overflow: hidden;
+    }
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .qty-btn:hover {
+      background: var(--border);
+    }
+    .qty-val {
+      width: 40px;
+      text-align: center;
+      line-height: 32px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .remove-btn {
+      background: transparent;
+      border: none;
+      color: #ef4444;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      align-self: start;
+      padding: 4px;
+      opacity: 0.7;
+    }
+    .remove-btn:hover {
+      opacity: 1;
+    }
+    .remove-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+    @media (max-width: 800px) {
+      .cart-layout { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .cart-item { grid-template-columns: 80px 1fr; }
+      .cart-item-img { width: 80px; height: 80px; }
+      .remove-btn { grid-column: 2; justify-self: end; }
+    }
+  </style>
+
+</body>
+</html>

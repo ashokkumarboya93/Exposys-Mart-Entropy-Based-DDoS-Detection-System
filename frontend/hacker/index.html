@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHANTOM — DDoS Attack Simulator</title>
+  <link rel="stylesheet" href="css/hacker.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <script>
+    // Instant auth gate — blocks rendering if not logged in
+    if (!localStorage.getItem('phantom_token')) {
+      window.location.replace('login.html');
+      document.documentElement.style.display = 'none';
+    }
+  </script>
+  <style>
+    body { opacity: 0; transition: opacity 0.3s ease; }
+    body.authenticated { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Video Background ──────────────────────────────── -->
+  <div class="video-bg">
+    <video autoplay muted loop playsinline>
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="video-overlay"></div>
+  <div class="scan-line"></div>
+
+  <!-- ── Attack Animation Overlay ──────────────────────── -->
+  <div class="attack-overlay" id="attack-overlay">
+    <div class="attack-pulse"></div>
+  </div>
+
+  <!-- ── Navbar ────────────────────────────────────────── -->
+  <nav class="hacker-nav">
+    <div class="nav-brand">
+      <div class="nav-brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="nav-brand-name">PHANTOM</span>
+    </div>
+
+    <ul class="nav-links">
+      <a href="#presets">
+        Attack Presets
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+      <a href="#custom">
+        Custom Config
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+      <a href="#logs">
+        Attack Log
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+      <a href="http://localhost:8000/store/" target="_blank">
+        Target Store
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+    </ul>
+
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button id="logout-btn" onclick="HackerAPI.logout()" style="
+        display:inline-flex; align-items:center; gap:6px;
+        background:transparent; border:1px solid var(--red);
+        color:var(--red); padding:11px 24px; border-radius:100px;
+        font-family:var(--font-sans); font-size:14px; font-weight:600;
+        cursor:pointer; transition:all 0.25s ease; letter-spacing:0.02em;
+      " onmouseover="this.style.background='var(--red)';this.style.color='#fff';this.style.boxShadow='0 0 20px var(--red-glow)'" onmouseout="this.style.background='transparent';this.style.color='var(--red)';this.style.boxShadow='none'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Hero Section ──────────────────────────────────── -->
+  <section class="hero-section">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      <span class="hero-badge-text">Target Status: <strong id="target-status-text">Checking...</strong></span>
+    </div>
+
+    <h1 class="hero-title">DDoS Attack Simulation Console</h1>
+
+    <p class="hero-sub">
+      Entropy-based DDoS detection research platform. Launch configurable attack simulations against Exposys Mart and observe real-time detection via Shannon entropy analysis.
+    </p>
+
+    <div class="hero-cta" id="scroll-to-presets">
+      <button class="hero-cta-inner" onclick="document.getElementById('presets').scrollIntoView({behavior:'smooth'})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Launch Attack
+      </button>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- ── Live Stats Bar ──────────────────────────────── -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-item">
+        <div class="stat-item-value" id="stat-target-url">localhost:8000</div>
+        <div class="stat-item-label">Target Server</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item-value" id="stat-status">
+          <span style="color: var(--green);">ONLINE</span>
+        </div>
+        <div class="stat-item-label">Server Status</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item-value" id="stat-attacks-count">0</div>
+        <div class="stat-item-label">Attacks Launched</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item-value" id="stat-total-reqs">0</div>
+        <div class="stat-item-label">Total Requests Sent</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         ATTACK PRESETS
+         ═══════════════════════════════════════════════════ -->
+    <div id="presets">
+      <div class="section-header">
+        <div class="section-icon red">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Attack Presets</div>
+          <div class="section-subtitle">Pre-configured attack scenarios for different DDoS patterns</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="presets-grid">
+
+      <!-- Traffic Spike -->
+      <div class="preset-card spike" data-preset="spike">
+        <div class="preset-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="preset-name">Traffic Spike</div>
+        <div class="preset-desc">Quick burst of concentrated traffic from few IPs. Fast and aggressive single wave.</div>
+        <div class="preset-stats">
+          <div class="stat">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Source IPs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">500</div>
+            <div class="stat-label">Req/IP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">1</div>
+            <div class="stat-label">Wave</div>
+          </div>
+        </div>
+        <button class="launch-btn" data-preset="spike">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          LAUNCH SPIKE
+        </button>
+      </div>
+
+      <!-- Bot Swarm -->
+      <div class="preset-card swarm" data-preset="swarm">
+        <div class="preset-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
+        </div>
+        <div class="preset-name">Bot Swarm</div>
+        <div class="preset-desc">Distributed flood from rotating bot IPs across multiple attack waves.</div>
+        <div class="preset-stats">
+          <div class="stat">
+            <div class="stat-value">20</div>
+            <div class="stat-label">Source IPs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">200</div>
+            <div class="stat-label">Req/IP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">3</div>
+            <div class="stat-label">Waves</div>
+          </div>
+        </div>
+        <button class="launch-btn" data-preset="swarm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          LAUNCH SWARM
+        </button>
+      </div>
+
+      <!-- Sustained Flood -->
+      <div class="preset-card flood" data-preset="flood">
+        <div class="preset-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="preset-name">Sustained Flood</div>
+        <div class="preset-desc">Heavy sustained load from dedicated IPs over extended multi-wave duration.</div>
+        <div class="preset-stats">
+          <div class="stat">
+            <div class="stat-value">3</div>
+            <div class="stat-label">Source IPs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">2000</div>
+            <div class="stat-label">Req/IP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Waves</div>
+          </div>
+        </div>
+        <button class="launch-btn" data-preset="flood">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          LAUNCH FLOOD
+        </button>
+      </div>
+
+      <!-- Checkout Flood -->
+      <div class="preset-card flood" data-preset="checkout_flood">
+        <div class="preset-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <div class="preset-name">Checkout Flood</div>
+        <div class="preset-desc">High volume of requests attempting to exhaust checkout infrastructure.</div>
+        <div class="preset-stats">
+          <div class="stat">
+            <div class="stat-value">10</div>
+            <div class="stat-label">Source IPs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">1500</div>
+            <div class="stat-label">Req/IP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">2</div>
+            <div class="stat-label">Waves</div>
+          </div>
+        </div>
+        <button class="launch-btn" data-preset="checkout_flood">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          LAUNCH CART
+        </button>
+      </div>
+
+      <!-- Product Page Burst -->
+      <div class="preset-card swarm" data-preset="product_burst">
+        <div class="preset-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </div>
+        <div class="preset-name">Product Burst</div>
+        <div class="preset-desc">Targeted burst against random product detail pages to exhaust database reads.</div>
+        <div class="preset-stats">
+          <div class="stat">
+            <div class="stat-value">15</div>
+            <div class="stat-label">Source IPs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">400</div>
+            <div class="stat-label">Req/IP</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">4</div>
+            <div class="stat-label">Waves</div>
+          </div>
+        </div>
+        <button class="launch-btn" data-preset="product_burst">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          LAUNCH BURST
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Attack Status ───────────────────────────────── -->
+    <div class="attack-status" id="attack-status">
+      <div class="status-title" id="status-title"></div>
+      <div class="status-detail" id="status-detail"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         CUSTOM ATTACK
+         ═══════════════════════════════════════════════════ -->
+    <div id="custom">
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Custom Attack Configuration</div>
+          <div class="section-subtitle">Fine-tune your own attack parameters</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="custom-panel">
+      <div class="custom-inputs">
+        <div class="input-group">
+          <label>Bot IPs</label>
+          <input type="number" id="custom-ips" value="10" min="1" max="50">
+        </div>
+        <div class="input-group">
+          <label>Requests / IP</label>
+          <input type="number" id="custom-rpi" value="300" min="10" max="10000">
+        </div>
+        <div class="input-group">
+          <label>Waves</label>
+          <input type="number" id="custom-waves" value="2" min="1" max="10">
+        </div>
+        <div class="input-group">
+          <label>Wave Delay (ms)</label>
+          <input type="number" id="custom-delay" value="500" min="0" max="5000">
+        </div>
+      </div>
+
+      <div class="custom-summary">
+        <div class="summary-item">
+          <div class="summary-value" id="custom-total">6,000</div>
+          <div class="summary-label">Est. Total Requests</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" id="custom-duration">~1.0s</div>
+          <div class="summary-label">Est. Duration</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" style="color: var(--amber);">CUSTOM</div>
+          <div class="summary-label">Attack Type</div>
+        </div>
+      </div>
+
+      <button class="launch-btn" id="custom-launch-btn" style="max-width: 340px; margin: 0 auto; display: flex;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        LAUNCH CUSTOM ATTACK
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         ATTACK LOGS
+         ═══════════════════════════════════════════════════ -->
+    <div id="logs">
+      <div class="section-header">
+        <div class="section-icon cyan">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+        </div>
+        <div>
+          <div class="section-title">Attack Log</div>
+          <div class="section-subtitle">Real-time feed of all attack events</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="logs-panel">
+      <div class="logs-header">
+        <span class="logs-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Live Event Feed
+        </span>
+        <button class="clear-btn" id="clear-logs-btn">Clear All</button>
+      </div>
+      <div class="logs-body" id="logs-body">
+        <div class="logs-empty" id="logs-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg><br>
+          No attacks launched yet. Select a preset or configure a custom attack above.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Quick Actions ───────────────────────────────── -->
+    <div class="quick-actions">
+      <a href="http://localhost:8000/store/" target="_blank" class="action-btn green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        View Target Store
+      </a>
+      <button class="action-btn amber" id="reset-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Reset All Data
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── Footer ────────────────────────────────────────── -->
+  <footer class="hacker-footer">
+    <div class="footer-line">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      PHANTOM DDoS SIMULATOR — EDUCATIONAL USE ONLY
+    </div>
+    <div class="footer-line">
+      Entropy-Based DDoS Detection on Exposys Mart Using FastAPI and Real-Time Analytics
+    </div>
+    <div class="footer-version">v2.0.0 — General Sans + Web3 Theme</div>
+  </footer>
+
+  <script src="js/hacker-api.js"></script>
+  <script src="js/hacker-app.js"></script>
+</body>
+</html>
