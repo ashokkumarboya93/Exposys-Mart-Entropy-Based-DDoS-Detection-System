@@ -108,24 +108,14 @@ let _traffic = parseInt(localStorage.getItem('sz_traffic') || '0');
 function updateTraffic(n) {
   _traffic += n;
   localStorage.setItem('sz_traffic', _traffic);
-  const el = document.getElementById('traffic-count');
-  if (el) el.textContent = _traffic.toLocaleString();
 }
 
-function initTraffic() {
-  const el = document.getElementById('traffic-count');
-  if (el) el.textContent = _traffic.toLocaleString();
-  // Show badge after first traffic
-  const badge = document.getElementById('traffic-pill');
-  if (badge && _traffic > 0) badge.style.display = 'flex';
-}
+
 
 async function track(page, action, productId, searchQuery, category) {
   try {
     const r = await StoreAPI.trackInteraction({ page, action, product_id: productId, search_query: searchQuery, category });
     if (r.traffic_generated) updateTraffic(r.traffic_generated);
-    const pill = document.getElementById('traffic-pill');
-    if (pill) pill.style.display = 'flex';
   } catch { /* silent */ }
 }
 

@@ -23,8 +23,9 @@ This project introduces a sophisticated **Entropy-Based DDoS Detection System** 
 - [4. Proposed Method with Architecture](#5-proposed-method-with-architecture)
 - [5. Methodology](#6-methodology)
 - [6. Implementation](#7-implementation)
-- [7. Folder Structure](#8-folder-structure)
-- [8. Conclusion](#9-conclusion)
+- [7. Key Security Features](#8-key-security-features)
+- [8. Folder Structure](#9-folder-structure)
+- [9. Conclusion](#10-conclusion)
 
 ---
 
@@ -67,20 +68,32 @@ The core of the system is the **Shannon Entropy Algorithm**.
 3.  **Entropy Calculation:** The system computes the entropy $H$:
     $$H = -\sum P(i) \log_2 P(i)$$
 4.  **Anomaly Detection:** Under normal conditions, many unique IPs visit different pages, resulting in a high $H$ value. During an attack, a few IPs dominate the traffic, causing $H$ to plummet.
-5.  **Mitigation:** When $H < \text{Threshold}$, the system flags the traffic as "Critical" and identifies the dominant IPs for blocking.
+5.  **Mitigation:** When $H < \text{Threshold}$, the system flags the traffic as "Critical" and identifies the dominant IPs. Administrators can then use the **One-Click Block** feature to permanently blacklist these IPs.
+6.  **Persistent Enforcement:** Blocked IPs are stored in a dedicated `blocked_ips` database table, and a specialized security middleware rejects all subsequent requests from these sources with a `403 Forbidden` status.
 
 ---
 
 ## 7. IMPLEMENTATION
 The project is implemented as a full-stack solution:
 - **Backend:** Python, FastAPI, SQLAlchemy, JWT Security.
-- **Frontend:** Vanilla JS (ES6+), HTML5, CSS3 with Glassmorphism aesthetics.
+- **Frontend:** Vanilla JS (ES6+), HTML5, CSS3 with GlassMorphism aesthetics.
+- **Security Middleware:** Custom IP-interception layer for real-time traffic filtering.
 - **Simulation:** A dedicated multi-threaded traffic generator to simulate realistic attack vectors (HTTP Flood, Bot Swarms).
-- **Database:** Optimized MySQL schemas with indexing for high-speed traffic logging.
+- **Database:** Optimized MySQL schemas with dedicated persistence for blacklisted addresses.
 
 ---
 
-## 8. FOLDER STRUCTURE
+## 8. KEY SECURITY FEATURES
+- **Real-time Entropy Tracking:** Continuous monitoring of traffic randomness using Shannon Entropy.
+- **Dynamic Thresholding:** Automated baseline calculation to adapt to varying traffic loads.
+- **One-Click Mitigation:** Instant IP blacklisting directly from the analytics dashboard.
+- **Persistent Blacklist:** MySQL-backed storage of blocked IPs for long-term protection.
+- **Security Middleware:** High-performance request filtering to reject malicious traffic before it hits application logic.
+- **Forensic Logging:** Detailed logs of every request, including IP, endpoint, and traffic type (Normal/Attack).
+
+---
+
+## 9. FOLDER STRUCTURE
 ```text
 .
 ├── backend/                # FastAPI Backend Source
@@ -100,10 +113,10 @@ The project is implemented as a full-stack solution:
 
 ---
 
-## 9. CONCLUSION
+## 10. CONCLUSION
 The **DDoS Sentinel** project successfully demonstrates that Information Theory, specifically Shannon Entropy, is a highly effective tool for modern network defense. By focusing on the statistical signature of traffic rather than static rules, we have built a system that is resilient, accurate, and capable of protecting web infrastructure against both known and unknown DDoS threats. 
 
-The combination of a high-end e-commerce simulation and a real-time analytics dashboard makes this a comprehensive platform for both learning and enterprise-grade security research.
+The integration of **Persistent IP Blacklisting** ensures that the system doesn't just detect attacks but actively mitigates them, providing a robust, production-ready security layer for enterprise applications.
 
 ---
 

@@ -25,7 +25,8 @@ from app.core.security import (
 from app.api.dependencies import get_aggregator
 from app.models.db_models import (
     TrafficEvent, AttackEvent, AdminUser,
-    SuspiciousIP, EntropyHistory,
+    SuspiciousIP, EntropyHistory, SessionLog,
+    RequestLog, HackerAttackLog, HackerAttackSession, BlockedIP,
 )
 from app.models.schemas import AdminLoginRequest, AdminLoginResponse, AdminAnalyticsResponse
 from app.services.store_service import StoreService
@@ -37,7 +38,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
-ANALYTICS_WINDOW_HOURS = 24
+ANALYTICS_WINDOW_HOURS = 1
 ACTIVE_SHOPPER_WINDOW_MINUTES = 30
 ENTROPY_HISTORY_LIMIT = 60
 RECENT_REQUESTS_LIMIT = 30
@@ -173,32 +174,30 @@ async def get_analytics(
         total_requests = int(totals_row.total_requests or 0)
         unique_ips = int(totals_row.unique_ips or 0)
 
-        # Detection snapshot values
-        if latest_entropy:
-            status_value = latest_entropy.status or "INSUFFICIENT_DATA"
-            entropy_score = float(latest_entropy.entropy_value or 0.0)
-            normalized_entropy = float(latest_entropy.normalized_entropy or 0.0)
-            baseline_entropy = latest_entropy.baseline_entropy
-            threshold = latest_entropy.threshold
-        elif engine_snapshot:
+        # Detection snapshot values - Prioritize LIVE engine snapshot for accuracy
+        if engine_snapshot:
             status_value = engine_snapshot.status.value
             entropy_score = float(engine_snapshot.entropy)
             normalized_entropy = float(engine_snapshot.normalized_entropy)
             baseline_entropy = engine_snapshot.baseline_entropy
             threshold = engine_snapshot.threshold
+            message = engine_snapshot.message
+        elif latest_entropy:
+            status_value = latest_entropy.status or "INSUFFICIENT_DATA"
+            entropy_score = float(latest_entropy.entropy_value or 0.0)
+            normalized_entropy = float(latest_entropy.normalized_entropy or 0.0)
+            baseline_entropy = latest_entropy.baseline_entropy
+            threshold = latest_entropy.threshold
+            message = _message_from_status(status_value, entropy_score, threshold)
         else:
             status_value = "INSUFFICIENT_DATA"
             entropy_score = 0.0
             normalized_entropy = 0.0
             baseline_entropy = None
             threshold = None
+            message = "Waiting for traffic..."
 
         severity_value = _severity_from_status(status_value)
-        message = (
-            engine_snapshot.message
-            if engine_snapshot and engine_snapshot.status.value == status_value
-            else _message_from_status(status_value, entropy_score, threshold)
-        )
 
         # Recent sessions
         recent_sessions = StoreService.get_recent_sessions(
@@ -360,6 +359,45 @@ async def get_analytics(
         )
 
 
+@router.post("/reset-analytics")
+async def reset_analytics(
+    db: Session = Depends(get_db),
+    aggregator: MetricsAggregator = Depends(get_aggregator),
+    _admin: dict = Depends(require_admin),
+):
+    """
+    Reset all analytics data.
+    Clears all database records and resets in-memory detection state.
+    """
+    try:
+        # 1. Clear all analytics-related database tables
+        db.query(TrafficEvent).delete()
+        db.query(AttackEvent).delete()
+        db.query(SuspiciousIP).delete()
+        db.query(EntropyHistory).delete()
+        db.query(SessionLog).delete()
+        db.query(RequestLog).delete()
+        
+        # Also clear existing hacker session logs from Workbench tables
+        db.query(HackerAttackLog).delete()
+        db.query(HackerAttackSession).delete()
+        
+        db.commit()
+
+        # 2. Reset in-memory services (Simulator + Detection Engine)
+        aggregator.reset_all()
+
+        logger.info("Admin reset: All tables cleared and detection engine reset.")
+        return {"success": True, "message": "System has been completely reset to a clean state."}
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Failed to reset analytics: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Analytics reset failed: {str(exc)}",
+        )
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  ENTROPY HISTORY
 # ═══════════════════════════════════════════════════════════════════
@@ -446,17 +484,27 @@ async def block_ip(
     db: Session = Depends(get_db),
     _admin: dict = Depends(require_admin),
 ):
-    """Block a suspicious IP address."""
+    """Block a suspicious IP address and add to persistent blacklist."""
     validated_ip = _validate_ip_address(ip_address)
+    
+    # 1. Update suspicious list if exists
     sus_ip = db.query(SuspiciousIP).filter(SuspiciousIP.ip_address == validated_ip).first()
-    if not sus_ip:
-        raise HTTPException(status_code=404, detail="IP not found in suspicious list")
-
-    sus_ip.is_blocked = True
+    if sus_ip:
+        sus_ip.is_blocked = True
+    
+    # 2. Add to dedicated blocked_ips table for middleware to pick up
+    already_blocked = db.query(BlockedIP).filter(BlockedIP.ip_address == validated_ip).first()
+    if not already_blocked:
+        new_block = BlockedIP(
+            ip_address=validated_ip,
+            reason="Manually blocked via Admin Dashboard"
+        )
+        db.add(new_block)
+    
     db.commit()
     logger.warning("IP blocked by admin: %s", validated_ip)
 
-    return {"success": True, "message": f"IP {validated_ip} has been blocked"}
+    return {"success": True, "message": f"IP {validated_ip} has been permanently blocked"}
 
 
 @router.post("/ip/{ip_address}/unblock")
@@ -465,18 +513,44 @@ async def unblock_ip(
     db: Session = Depends(get_db),
     _admin: dict = Depends(require_admin),
 ):
-    """Unblock a suspicious IP address (false-positive handling)."""
+    """Unblock a suspicious IP address and remove from blacklist."""
     validated_ip = _validate_ip_address(ip_address)
+    
+    # 1. Update suspicious list
     sus_ip = db.query(SuspiciousIP).filter(SuspiciousIP.ip_address == validated_ip).first()
-    if not sus_ip:
-        raise HTTPException(status_code=404, detail="IP not found")
-
-    sus_ip.is_blocked = False
-    sus_ip.risk_score = max(0, sus_ip.risk_score - 30)
+    if sus_ip:
+        sus_ip.is_blocked = False
+        sus_ip.risk_score = max(0, sus_ip.risk_score - 30)
+    
+    # 2. Remove from dedicated blocked_ips table
+    blocked_record = db.query(BlockedIP).filter(BlockedIP.ip_address == validated_ip).first()
+    if blocked_record:
+        db.delete(blocked_record)
+        
     db.commit()
     logger.info("IP unblocked by admin: %s", validated_ip)
 
     return {"success": True, "message": f"IP {validated_ip} has been unblocked"}
+
+
+@router.get("/blocked-ips")
+async def get_blocked_ips(
+    db: Session = Depends(get_db),
+    _admin: dict = Depends(require_admin),
+):
+    """Return all currently blocked IP addresses."""
+    blocked = db.query(BlockedIP).order_by(BlockedIP.blocked_at.desc()).all()
+    return {
+        "success": True,
+        "blocked_ips": [
+            {
+                "ip": b.ip_address,
+                "reason": b.reason,
+                "blocked_at": b.blocked_at.isoformat() if b.blocked_at else ""
+            }
+            for b in blocked
+        ]
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════

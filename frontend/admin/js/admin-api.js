@@ -80,4 +80,20 @@ class AdminAPI {
   static getReport() {
     return this.fetch('/api/admin/report');
   }
+
+  static resetAnalytics() {
+    return this.fetch('/api/admin/reset-analytics', { method: 'POST' });
+  }
+
+  static blockIP(ip) {
+    return this.fetch(`/api/admin/ip/${ip}/block`, { method: 'POST' });
+  }
+
+  static unblockIP(ip) {
+    return this.fetch(`/api/admin/ip/${ip}/unblock`, { method: 'POST' });
+  }
+
+  static getBlockedIPs() {
+    return this.fetch('/api/admin/blocked-ips');
+  }
 }

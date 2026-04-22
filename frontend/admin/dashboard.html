@@ -38,6 +38,10 @@
         <div class="dashboard-subtitle">Entropy-based DDoS detection monitoring • Auto-refresh: 3s</div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="nav-btn warning" id="reset-analytics-btn" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          Reset Analytics
+        </button>
         <div id="status-badge" class="status-badge status-unknown">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           LOADING
@@ -117,7 +121,7 @@
       </div>
     </div>
 
-    <!-- Tables -->
+    <!-- Tables Grid 1: Suspicious & Blocked -->
     <div class="tables-grid animate-in delay-3">
       <!-- Suspicious IPs -->
       <div class="table-card">
@@ -127,7 +131,7 @@
         </div>
         <table class="data-table" id="suspicious-table">
           <thead>
-            <tr><th>#</th><th>IP Address</th><th>Requests</th><th>Risk</th></tr>
+            <tr><th>#</th><th>IP Address</th><th>Requests</th><th>Risk</th><th>Action</th></tr>
           </thead>
           <tbody id="suspicious-tbody"></tbody>
         </table>
@@ -137,11 +141,32 @@
         </div>
       </div>
 
+      <!-- Blocked IPs -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Blocked IPs (Blacklist)</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Persistence</span>
+        </div>
+        <table class="data-table" id="blocked-table">
+          <thead>
+            <tr><th>IP Address</th><th>Blocked At</th><th>Action</th></tr>
+          </thead>
+          <tbody id="blocked-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="blocked-empty">
+          <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="2" style="width:28px;height:28px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+          Blacklist is empty
+        </div>
+      </div>
+    </div>
+
+    <!-- Tables Grid 2: Attacks & Sessions -->
+    <div class="tables-grid animate-in delay-3">
       <!-- Attack Events -->
       <div class="table-card">
         <div class="table-header">
-          <span class="table-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Recent Attacks</span>
-          <span style="font-size: 0.72rem; color: var(--text-muted);">Attack history</span>
+          <span class="table-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Recent Attack Sessions</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">History</span>
         </div>
         <table class="data-table" id="attacks-table">
           <thead>
@@ -154,7 +179,6 @@
           No attacks recorded
         </div>
       </div>
-    </div>
 
     <!-- Sessions -->
     <div class="table-card animate-in delay-3" style="margin-bottom: 24px;">

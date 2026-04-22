@@ -4,7 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  initTraffic();
+
 
   const pg = detectPage();
   if (pg === 'home')     initHome();

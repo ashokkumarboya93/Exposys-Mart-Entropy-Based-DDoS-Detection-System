@@ -50,6 +50,32 @@ def _seed_defaults():
         db.close()
 
 
+def _clear_analytics_startup():
+    """Wipe analytics tables on startup for a fresh experience."""
+    from app.models.db_models import (
+        TrafficEvent, AttackEvent, SuspiciousIP, 
+        EntropyHistory, SessionLog, RequestLog,
+        HackerAttackSession, HackerAttackLog
+    )
+    db = SessionLocal()
+    try:
+        db.query(TrafficEvent).delete()
+        db.query(AttackEvent).delete()
+        db.query(SuspiciousIP).delete()
+        db.query(EntropyHistory).delete()
+        db.query(SessionLog).delete()
+        db.query(RequestLog).delete()
+        db.query(HackerAttackLog).delete()
+        db.query(HackerAttackSession).delete()
+        db.commit()
+        logger.info("[DB] Analytics and attack history cleared for fresh startup.")
+    except Exception as exc:
+        db.rollback()
+        logger.warning("[DB] Startup analytics clear failed: %s", exc)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Startup ──────────────────────────────────────────────────
@@ -61,6 +87,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize database tables
     init_db()
     logger.info("[DB] Database initialized: %s", settings.DATABASE_URL.split("@")[-1])
+    
+    # Clear old analytics on startup for a fresh "Normal" state
+    _clear_analytics_startup()
+    
     logger.info("[CORS] Allowed origins: %s", settings.ALLOWED_ORIGINS)
 
     # Seed default users

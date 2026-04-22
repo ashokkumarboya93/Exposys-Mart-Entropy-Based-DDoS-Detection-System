@@ -1690,30 +1690,7 @@ button { cursor:pointer; font-family:var(--font); border:none; }
 /* ══════════════════════════════════════════════════════════
    TRAFFIC + TOAST
    ══════════════════════════════════════════════════════════ */
-.traffic-pill {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  background: var(--bg-white);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.77rem;
-  font-weight: 600;
-  box-shadow: var(--shadow-md);
-  z-index: 999;
-}
-.traffic-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--success);
-  animation: blink 2s infinite;
-}
-.traffic-label { color: var(--text-muted); }
-.traffic-num { color: var(--text-primary); font-family: monospace; }
+
 
 .toast-stack {
   position: fixed;

@@ -268,3 +268,13 @@ class DownloadableReport(Base):
     data_json = Column(Text, default="{}")
     file_path = Column(String(512), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BlockedIP(Base):
+    """Table for strictly blocked IP addresses."""
+    __tablename__ = "blocked_ips"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String(45), unique=True, nullable=False, index=True)
+    reason = Column(Text, nullable=True)
+    blocked_at = Column(DateTime, default=datetime.utcnow)

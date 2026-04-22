@@ -23,6 +23,94 @@ document.addEventListener('DOMContentLoaded', () => {
   // Download report
   document.getElementById('download-csv-btn')?.addEventListener('click', () => downloadFile('/api/admin/report/csv'));
   document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('/api/admin/report/pdf'));
+
+  // Reset Analytics
+  document.getElementById('reset-analytics-btn')?.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to reset all analytics data? This will clear the attack history and reset the detection engine baseline.')) return;
+    
+    const btn = document.getElementById('reset-analytics-btn');
+    const originalContent = btn.innerHTML;
+    
+    try {
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Resetting...';
+      
+      await AdminAPI.resetAnalytics();
+      
+      // Clear UI state immediately for instant feedback
+      document.getElementById('status-badge').className = 'status-badge status-unknown';
+      document.getElementById('status-badge').innerHTML = 'RESETTING...';
+      document.getElementById('message-bar').className = 'message-bar message-unknown';
+      document.getElementById('message-text').textContent = 'System reset successful. Rebuilding baseline...';
+      
+      // Clear KPI values
+      ['kpi-requests', 'kpi-shoppers', 'kpi-ips', 'kpi-entropy', 'kpi-confidence', 'kpi-suspicious'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = id === 'kpi-entropy' ? '—' : '0';
+      });
+
+      // Fetch data immediately to update the dashboard
+      await fetchAndUpdate();
+    } catch (err) {
+      console.error('Reset error:', err);
+      alert('Failed to reset analytics: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = originalContent;
+    }
+  });
+
+  // Handle IP Blocking clicks
+  document.addEventListener('click', async (e) => {
+    const blockBtn = e.target.closest('.block-ip-btn');
+    if (!blockBtn) return;
+
+    const ip = blockBtn.dataset.ip;
+    if (!ip) return;
+
+    if (!confirm(`Are you sure you want to PERMANENTLY block IP: ${ip}? All future requests from this IP will be rejected with a 403 Forbidden.`)) return;
+
+    try {
+      blockBtn.disabled = true;
+      blockBtn.innerHTML = '<span class="loading-spinner"></span>';
+      
+      const result = await AdminAPI.blockIP(ip);
+      if (result.success) {
+        await fetchAndUpdate();
+      }
+    } catch (err) {
+      console.error('Block error:', err);
+      alert('Failed to block IP: ' + err.message);
+      blockBtn.disabled = false;
+      blockBtn.innerHTML = 'Block';
+    }
+  });
+
+  // Handle IP Unblocking clicks
+  document.addEventListener('click', async (e) => {
+    const unblockBtn = e.target.closest('.unblock-ip-btn');
+    if (!unblockBtn) return;
+
+    const ip = unblockBtn.dataset.ip;
+    if (!ip) return;
+
+    try {
+      unblockBtn.disabled = true;
+      unblockBtn.innerHTML = '<span class="loading-spinner"></span>';
+      
+      const result = await AdminAPI.unblockIP(ip);
+      if (result.success) {
+        await fetchAndUpdate();
+      }
+    } catch (err) {
+      console.error('Unblock error:', err);
+      alert('Failed to unblock IP: ' + err.message);
+      unblockBtn.disabled = false;
+      unblockBtn.innerHTML = 'Unblock';
+    }
+  });
 });
 
 // ── Chart Initialization ──────────────────────────────────
@@ -200,6 +288,11 @@ async function fetchAndUpdate() {
     updateAttacksTable(data || {});
     updateSessionsTable(data || {});
     updateLivePackets(data || {});
+    
+    // Fetch and update dedicated blocked table
+    const blockedData = await AdminAPI.getBlockedIPs();
+    updateBlockedTable(blockedData || {});
+    
     updateRefreshTime();
   } catch (err) {
     console.error('Dashboard fetch error:', err);
@@ -318,12 +411,19 @@ function updateSuspiciousTable(data) {
   tbody.innerHTML = suspiciousIps.slice(0, 10).map((s, i) => {
     const riskScore = toNumber(s.risk_score);
     const risk = riskScore >= 70 ? 'high' : riskScore >= 40 ? 'medium' : 'low';
+    const isBlocked = s.is_blocked || false;
+    
     return `
       <tr>
         <td>${i + 1}</td>
         <td style="font-family: var(--font-mono); font-size: 0.78rem;">${escapeHtml(s.ip || '-')}</td>
         <td>${toNumber(s.requests).toLocaleString()}</td>
         <td><span class="risk-badge risk-${risk}">${risk.toUpperCase()}</span></td>
+        <td>
+          ${isBlocked 
+            ? '<span class="status-pill blocked">Blocked</span>' 
+            : `<button class="btn-action block-ip-btn" data-ip="${s.ip}" title="Blacklist this IP">Block</button>`}
+        </td>
       </tr>
     `;
   }).join('');
@@ -455,7 +555,91 @@ async function downloadFile(path) {
     console.error('Download error:', err);
     alert('Failed to download report.');
   }
-}// ── Live Packets Feed (Postman Style) ─────────────────────
+}
+
+function updateAttacksTable(data) {
+  const tbody = document.getElementById('attacks-tbody');
+  const empty = document.getElementById('attacks-empty');
+  if (!tbody) return;
+
+  const attackEvents = toArray(data.attack_events);
+  if (attackEvents.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = attackEvents.slice(0, 10).map(a => {
+    const time = a.timestamp ? new Date(a.timestamp).toLocaleTimeString() : '--';
+    return `
+      <tr>
+        <td style="font-size: 0.78rem;">${time}</td>
+        <td><span class="type-badge type-attack">${escapeHtml(a.preset_type || '-')}</span></td>
+        <td>${toNumber(a.num_ips)}</td>
+        <td>${toNumber(a.total_requests).toLocaleString()}</td>
+        <td style="color: var(--green); font-weight: 600;">${escapeHtml(a.status || '-')}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateSessionsTable(data) {
+  const tbody = document.getElementById('sessions-tbody');
+  const empty = document.getElementById('sessions-empty');
+  if (!tbody) return;
+
+  const sessions = toArray(data.recent_sessions);
+  if (sessions.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = sessions.slice(0, 10).map(s => `
+    <tr>
+      <td style="font-family: var(--font-mono); font-size: 0.75rem;">${escapeHtml(s.session_id || '-')}</td>
+      <td style="font-family: var(--font-mono); font-size: 0.75rem;">${escapeHtml(s.ip || '-')}</td>
+      <td>${toNumber(s.pages_visited)}</td>
+      <td>${toNumber(s.total_interactions)}</td>
+      <td>${toNumber(s.duration_min)}m</td>
+      <td><span class="type-badge ${s.is_active ? 'type-normal' : ''}">${s.is_active ? 'Active' : 'Ended'}</span></td>
+    </tr>
+  `).join('');
+}
+
+function updateBlockedTable(data) {
+  const tbody = document.getElementById('blocked-tbody');
+  const empty = document.getElementById('blocked-empty');
+  if (!tbody) return;
+
+  const blockedIps = toArray(data.blocked_ips);
+  if (blockedIps.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = blockedIps.map(b => {
+    const time = b.blocked_at ? new Date(b.blocked_at).toLocaleString() : '--';
+    return `
+      <tr>
+        <td style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--red); font-weight: 600;">${escapeHtml(b.ip || '-')}</td>
+        <td style="font-size: 0.75rem;">${time}</td>
+        <td>
+          <button class="btn-action unblock-ip-btn" data-ip="${b.ip}" style="border-color: var(--green); color: var(--green);">Unblock</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Live Packets Feed (Postman Style) ─────────────────────
 const METHOD_COLORS = {
   'GET': '#10B981', 'POST': '#3B82F6', 'PUT': '#F59E0B', 'DELETE': '#EF4444'
 };

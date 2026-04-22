@@ -187,7 +187,7 @@ PRODUCT_CATALOG = [
 
     # ── Home & Living (10 items) ──────────────────────────────────────────
     {
-        "id": 14, "name": "Philips Hue White Ambiance Lamp", "brand": "Philips", "price": 1800.0, "original_price": 2500.0, "category": "home", "rating": 4.6, "reviews": 11245, "badge": "Smart Home", "image": "/store/images/products/14.jpg", "description": "Smart LED lamp with app control.", "specs": {"Light": "LED 9.5W", "Color Temp": "2200-6500K", "Smart": "Zigbee + BT", "Lifespan": "25000 hours"}
+        "id": 14, "name": "Philips Hue White Ambiance Lamp", "brand": "Philips", "price": 1800.0, "original_price": 2500.0, "category": "home", "rating": 4.6, "reviews": 11245, "badge": "Smart Home", "image": "/store/images/products/14.png", "description": "Smart LED lamp with app control.", "specs": {"Light": "LED 9.5W", "Color Temp": "2200-6500K", "Smart": "Zigbee + BT", "Lifespan": "25000 hours"}
     },
     {
         "id": 15, "name": "Fiddle Leaf Fig Indoor Plant", "brand": "The Sill", "price": 600.0, "original_price": 1200.0, "category": "home", "rating": 4.4, "reviews": 4876, "badge": "Trending", "image": "/store/images/products/15.jpg", "description": "Statement indoor plant in premium ceramic planter.", "specs": {"Height": "45-60cm", "Pot": "Ceramic 7\"", "Light": "Bright Indirect", "Water": "Weekly"}
@@ -215,7 +215,23 @@ PRODUCT_CATALOG = [
     },
     {
         "id": 119, "name": "Bose Smart Soundbar 900", "brand": "Bose", "price": 79900.0, "original_price": 104900.0, "category": "home", "rating": 4.6, "reviews": 5600, "badge": "Audio", "image": "/store/images/products/119.jpg", "description": "Dolby Atmos soundbar with voice assistants built-in.", "specs": {"Channels": "5.0.2", "Audio": "Dolby Atmos", "Connect": "HDMI eARC, Wi-Fi, BT", "Voice": "Alexa, Google"}
+    },
+    {
+        "id": 120, "name": "Amazon Echo Dot (5th Gen)", "brand": "Amazon", "price": 4499.0, "original_price": 5499.0, "category": "electronics", "rating": 4.7, "reviews": 25400, "badge": "Smart Speaker", "image": "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?w=500&h=500&fit=crop", "description": "Our best-sounding Echo Dot yet. Enjoy an improved audio experience.", "specs": {"Speaker": "1.73\" Front-firing", "Voice": "Alexa Built-in", "Motion": "Detection", "Temp": "Sensor"}
+    },
+    {
+        "id": 121, "name": "Sony PlayStation 5 Console", "brand": "Sony", "price": 54990.0, "original_price": 54990.0, "category": "electronics", "rating": 4.9, "reviews": 12500, "badge": "Console", "image": "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=500&h=500&fit=crop", "description": "Experience lightning-fast loading with an ultra-high speed SSD.", "specs": {"CPU": "8-core AMD Ryzen Zen 2", "GPU": "AMD Radeon RDNA 2", "Storage": "825GB SSD", "Video": "4K 120fps"}
+    },
+    {
+        "id": 122, "name": "Instant Pot Duo 7-in-1", "brand": "Instant Pot", "price": 8999.0, "original_price": 12999.0, "category": "home", "rating": 4.7, "reviews": 156000, "badge": "Kitchen Pick", "image": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=500&h=500&fit=crop", "description": "Cooks fast and saves time. The #1 selling multi-cooker.", "specs": {"Functions": "7-in-1", "Safety": "10+ Features", "Capacity": "6 Quart", "Material": "Stainless Steel"}
+    },
+    {
+        "id": 123, "name": "Apple AirPods Pro (2nd Gen)", "brand": "Apple", "price": 24900.0, "original_price": 26900.0, "category": "electronics", "rating": 4.8, "reviews": 45200, "badge": "Premium", "image": "https://images.unsplash.com/photo-1588423770574-91093b707971?w=500&h=500&fit=crop", "description": "Up to 2x more Active Noise Cancellation. Transparency mode.", "specs": {"Chip": "H2 Chip", "ANC": "Adaptive Audio", "Battery": "6 hours", "Charging": "MagSafe / USB-C"}
+    },
+    {
+        "id": 124, "name": "Fire TV Stick 4K", "brand": "Amazon", "price": 3999.0, "original_price": 5999.0, "category": "electronics", "rating": 4.7, "reviews": 89000, "badge": "Streaming", "image": "https://images.unsplash.com/photo-1544244015-0cd4b3ff6f70?w=500&h=500&fit=crop", "description": "Cinematic experience in 4K with support for Dolby Vision, HDR, and HDR10+.", "specs": {"Quality": "4K Ultra HD", "Remote": "Alexa Voice Remote", "Apps": "Netlfix, Prime, etc.", "Audio": "Dolby Atmos"}
     }
+
 ]
 
 CATEGORIES = [

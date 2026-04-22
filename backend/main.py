@@ -22,6 +22,8 @@ from app.api.routes import store, admin, attacker, auth
 from app.core.config import settings
 from app.core.events import lifespan
 from app.utils.logger import setup_logging
+from app.core.database import SessionLocal
+from app.models.db_models import BlockedIP
 
 # ── Logging ──────────────────────────────────────────────────────
 setup_logging()
@@ -52,6 +54,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── IP Blocking Middleware ──────────────────────────────────────
+@app.middleware("http")
+async def block_ips_middleware(request: Request, call_next):
+    """Intercepts requests from blocked IP addresses."""
+    # Skip block check for local dev or static files if needed, 
+    # but for DDoS we want to block EVERYTHING from that IP.
+    client_ip = request.client.host
+    
+    # Check database for blocked IP
+    db = SessionLocal()
+    try:
+        is_blocked = db.query(BlockedIP).filter(BlockedIP.ip_address == client_ip).first()
+        if is_blocked:
+            from app.utils.logger import get_logger
+            logger = get_logger("security")
+            logger.warning(f"Blocking request from blacklisted IP: {client_ip}")
+            return JSONResponse(
+                status_code=403,
+                content={
+                 "success": False,
+                    "detail": "Access Denied: Your IP has been blocked due to suspicious activity.",
+                    "ip": client_ip
+                }
+            )
+    finally:
+        db.close()
+        
+    return await call_next(request)
 
 # ── API Routes ──────────────────────────────────────────────────
 app.include_router(health.router)
